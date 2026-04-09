@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* --- Brand --- */
+    --color-brand-primary: #1e293b;
+    --color-brand-accent: #ea580c;
+    --color-brand-accent-hover: #c2410c;
+    --color-brand-accent-soft: #fff7ed;
+    --color-brand-accent-muted: #fdba74;
+
+    /* --- Backgrounds --- */
+    --color-bg-primary: #fafbfc;
+    --color-bg-secondary: #f3f4f6;
+    --color-bg-tertiary: #ffffff;
+    --color-surface-elevated: #ffffff;
+
+    /* --- Sidebar --- */
+    --color-sidebar-bg: #111827;
+    --color-sidebar-text: #d1d5db;
+    --color-sidebar-active: #ea580c;
+
+    /* --- Text --- */
+    --color-text-primary: #111827;
+    --color-text-secondary: #4b5563;
+    --color-text-tertiary: #9ca3af;
+    --color-text-inverse: #ffffff;
+
+    /* --- Borders --- */
+    --color-border-default: #e5e7eb;
+    --color-border-strong: #d1d5db;
+
+    /* --- Semantic --- */
+    --color-success: #059669;
+    --color-warning: #d97706;
+    --color-error: #dc2626;
+    --color-info: #2563eb;
+
+    /* --- Status --- */
+    --color-status-active: #059669;
+    --color-status-inactive: #9ca3af;
+    --color-status-pending: #d97706;
+    --color-status-critical: #dc2626;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface-primary font-body text-base text-content-primary;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border-default);
+  }
+}
+
+@layer components {
+  .focus-ring {
+    @apply outline-none ring-2 ring-brand-accent/40 ring-offset-1;
+  }
+}
