@@ -8,6 +8,8 @@ import {
   Wrench,
   DollarSign,
   FileText,
+  Building2,
+  Briefcase,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -18,14 +20,39 @@ interface NavItem {
   icon: React.ElementType;
 }
 
-const navigation: NavItem[] = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Frota", href: "/fleet", icon: Truck },
-  { label: "Motoristas", href: "/drivers", icon: Users },
-  { label: "Operações", href: "/operations", icon: Package },
-  { label: "Manutenção", href: "/maintenance", icon: Wrench },
-  { label: "Financeiro", href: "/finance", icon: DollarSign },
-  { label: "Documentos", href: "/documents", icon: FileText },
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const navigation: NavGroup[] = [
+  {
+    label: "Visão geral",
+    items: [{ label: "Dashboard", href: "/", icon: LayoutDashboard }],
+  },
+  {
+    label: "Cadastros",
+    items: [
+      { label: "Clientes", href: "/customers", icon: Building2 },
+      { label: "Fornecedores", href: "/suppliers", icon: Briefcase },
+    ],
+  },
+  {
+    label: "Operação",
+    items: [
+      { label: "Frota", href: "/fleet", icon: Truck },
+      { label: "Motoristas", href: "/drivers", icon: Users },
+      { label: "Operações", href: "/operations", icon: Package },
+      { label: "Manutenção", href: "/maintenance", icon: Wrench },
+    ],
+  },
+  {
+    label: "Gestão",
+    items: [
+      { label: "Financeiro", href: "/finance", icon: DollarSign },
+      { label: "Documentos", href: "/documents", icon: FileText },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -50,23 +77,34 @@ export function Sidebar() {
         )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-        {navigation.map((item) => (
-          <NavLink
-            key={item.href}
-            to={item.href}
-            end={item.href === "/"}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-white/10 text-white"
-                  : "text-sidebar-text hover:bg-white/5 hover:text-white"
-              } ${collapsed ? "justify-center" : ""}`
-            }
-          >
-            <item.icon className="h-[18px] w-[18px] shrink-0" />
-            {!collapsed && <span className="truncate">{item.label}</span>}
-          </NavLink>
+      <nav className="flex-1 overflow-y-auto px-2 py-4">
+        {navigation.map((group, groupIdx) => (
+          <div key={group.label} className={groupIdx > 0 ? "mt-5" : ""}>
+            {!collapsed && (
+              <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  end={item.href === "/"}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-white/10 text-white"
+                        : "text-sidebar-text hover:bg-white/5 hover:text-white"
+                    } ${collapsed ? "justify-center" : ""}`
+                  }
+                >
+                  <item.icon className="h-[18px] w-[18px] shrink-0" />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 

@@ -16,6 +16,10 @@ from src.modules.iam.domain.models import (  # noqa: F401
     RolePermission,
     User,
 )
+from src.modules.customers.domain.models import (  # noqa: F401
+    Customer,
+    Supplier,
+)
 
 settings = get_settings()
 config = context.config

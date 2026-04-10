@@ -3,6 +3,8 @@ import { AppShell } from "./app-shell";
 import { DashboardPlaceholder } from "@/modules/dashboard/page";
 import { LoginPage } from "@/modules/auth/login-page";
 import { ProtectedRoute } from "@/modules/auth/protected-route";
+import { CustomersPage } from "@/modules/customers/page";
+import { SuppliersPage } from "@/modules/suppliers/page";
 import { ModulePlaceholder } from "@/shared/components/module-placeholder";
 
 export function AppRoutes() {
@@ -18,6 +20,8 @@ export function AppRoutes() {
         }
       >
         <Route index element={<DashboardPlaceholder />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="suppliers" element={<SuppliersPage />} />
         <Route
           path="fleet"
           element={

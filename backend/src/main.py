@@ -19,6 +19,8 @@ from src.core.middleware import (
     SecurityHeadersMiddleware,
 )
 from src.modules.auth.presentation.routes import router as auth_router
+from src.modules.customers.presentation.routes import router as customers_router
+from src.modules.suppliers.presentation.routes import router as suppliers_router
 from src.modules.users.presentation.routes import router as users_router
 
 settings = get_settings()
@@ -68,3 +70,5 @@ async def healthcheck() -> dict[str, str]:
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
+app.include_router(customers_router, prefix="/api/v1")
+app.include_router(suppliers_router, prefix="/api/v1")
