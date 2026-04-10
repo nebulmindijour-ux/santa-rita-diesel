@@ -14,7 +14,7 @@ Sistema corporativo premium para gestão logística e administrativa.
 - Node.js 18+ (recomendado 20 LTS)
 - Python 3.12+
 - Docker + Docker Compose
-- VS Code (recomendado)
+- VS Code
 
 ## Setup Rápido
 
