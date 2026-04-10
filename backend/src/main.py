@@ -3,10 +3,16 @@ from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import get_settings
-from src.core.errors import AppError, app_error_handler, generic_error_handler
+from src.core.errors import (
+    AppError,
+    app_error_handler,
+    generic_error_handler,
+    validation_error_handler,
+)
 from src.core.middleware import (
     RequestIdMiddleware,
     RequestLoggingMiddleware,
@@ -47,6 +53,7 @@ app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(RequestIdMiddleware)
 
 app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
+app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(Exception, generic_error_handler)  # type: ignore[arg-type]
 
 

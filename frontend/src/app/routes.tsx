@@ -2,13 +2,21 @@ import { Routes, Route } from "react-router-dom";
 import { AppShell } from "./app-shell";
 import { DashboardPlaceholder } from "@/modules/dashboard/page";
 import { LoginPage } from "@/modules/auth/login-page";
+import { ProtectedRoute } from "@/modules/auth/protected-route";
 import { ModulePlaceholder } from "@/shared/components/module-placeholder";
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<AppShell />}>
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<DashboardPlaceholder />} />
         <Route
           path="fleet"

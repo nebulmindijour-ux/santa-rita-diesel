@@ -1,35 +1,72 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { useAuthStore } from "@/modules/auth/store";
+import { authService } from "@/modules/auth/service";
+import { extractProblem } from "@/shared/lib/api-client";
+
+function resolveErrorMessage(problem: Awaited<ReturnType<typeof extractProblem>>): string {
+  if (!problem) {
+    return "Não foi possível realizar o login. Tente novamente.";
+  }
+  if (typeof problem.detail === "string" && problem.detail.length > 0) {
+    return problem.detail;
+  }
+  if (problem.errors && problem.errors.length > 0) {
+    const first = problem.errors[0];
+    if (first && typeof first.message === "string") {
+      return first.message;
+    }
+  }
+  if (typeof problem.title === "string") {
+    return problem.title;
+  }
+  return "Não foi possível realizar o login. Tente novamente.";
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const setSession = useAuthStore((s) => s.setSession);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isBootstrapping = useAuthStore((s) => s.isBootstrapping);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  if (isBootstrapping) {
+    return null;
+  }
+
+  if (isAuthenticated) {
+    const from = (location.state as { from?: string } | null)?.from || "/";
+    return <Navigate to={from} replace />;
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
 
-    // Placeholder — será substituído pela integração real na Fase 2
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    if (email === "admin@santaritadiesel.com" && password === "admin123") {
-      navigate("/");
-    } else {
-      setError("E-mail ou senha incorretos.");
+    try {
+      const response = await authService.login({ email, password });
+      setSession(response.user, response.access_token);
+      const from = (location.state as { from?: string } | null)?.from || "/";
+      navigate(from, { replace: true });
+    } catch (err) {
+      const problem = await extractProblem(err);
+      setError(resolveErrorMessage(problem));
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
   return (
     <div className="flex min-h-screen">
-      {/* Painel institucional */}
       <div className="hidden w-[480px] flex-col justify-between bg-sidebar-bg p-10 lg:flex xl:w-[540px]">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-accent">
@@ -71,10 +108,8 @@ export function LoginPage() {
         </p>
       </div>
 
-      {/* Painel de login */}
       <div className="flex flex-1 items-center justify-center bg-surface-primary px-6">
         <div className="w-full max-w-[400px]">
-          {/* Logo mobile */}
           <div className="mb-10 flex items-center gap-3 lg:hidden">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-accent">
               <span className="text-base font-bold text-white">SR</span>
@@ -114,7 +149,8 @@ export function LoginPage() {
                 required
                 autoComplete="email"
                 autoFocus
-                className="block h-11 w-full rounded-lg border border-border-default bg-white px-3.5 text-sm text-content-primary placeholder:text-content-tertiary transition-colors focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+                disabled={isLoading}
+                className="block h-11 w-full rounded-lg border border-border-default bg-white px-3.5 text-sm text-content-primary placeholder:text-content-tertiary transition-colors focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20 disabled:opacity-60"
               />
             </div>
 
@@ -142,7 +178,8 @@ export function LoginPage() {
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
-                  className="block h-11 w-full rounded-lg border border-border-default bg-white px-3.5 pr-11 text-sm text-content-primary placeholder:text-content-tertiary transition-colors focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+                  disabled={isLoading}
+                  className="block h-11 w-full rounded-lg border border-border-default bg-white px-3.5 pr-11 text-sm text-content-primary placeholder:text-content-tertiary transition-colors focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20 disabled:opacity-60"
                 />
                 <button
                   type="button"

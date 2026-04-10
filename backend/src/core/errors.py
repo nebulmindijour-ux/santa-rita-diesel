@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from fastapi import Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
@@ -86,7 +87,11 @@ class ForbiddenError(AppError):
 
 
 class UnauthorizedError(AppError):
-    def __init__(self, detail: str = "Autenticação necessária.", error_code: str = "AUTH_REQUIRED") -> None:
+    def __init__(
+        self,
+        detail: str = "Autenticação necessária.",
+        error_code: str = "AUTH_REQUIRED",
+    ) -> None:
         super().__init__(
             ProblemDetail(
                 type="https://santaritadiesel.com/errors/unauthorized",
@@ -122,6 +127,63 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
         status_code=exc.problem.status,
         content=_problem_to_dict(exc.problem, str(request.url.path)),
     )
+
+
+_PYDANTIC_CODE_MAP: dict[str, str] = {
+    "missing": "REQUIRED",
+    "string_too_short": "MIN_LENGTH",
+    "string_too_long": "MAX_LENGTH",
+    "value_error": "INVALID",
+    "type_error": "INVALID_TYPE",
+    "int_parsing": "INVALID_TYPE",
+    "bool_parsing": "INVALID_TYPE",
+    "greater_than": "OUT_OF_RANGE",
+    "less_than": "OUT_OF_RANGE",
+    "greater_than_equal": "OUT_OF_RANGE",
+    "less_than_equal": "OUT_OF_RANGE",
+}
+
+
+def _humanize_pydantic_error(err_type: str, msg: str) -> str:
+    if err_type == "missing":
+        return "Campo obrigatório."
+    if err_type == "string_too_short":
+        return "Valor muito curto."
+    if err_type == "string_too_long":
+        return "Valor muito longo."
+    if err_type.startswith("value_error"):
+        return "Valor inválido."
+    return msg
+
+
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    field_errors: list[dict[str, str]] = []
+    for err in exc.errors():
+        loc = err.get("loc", ())
+        field_parts = [str(p) for p in loc if p not in ("body", "query", "path")]
+        field_name = ".".join(field_parts) if field_parts else "root"
+
+        err_type = str(err.get("type", "value_error"))
+        msg = str(err.get("msg", "Valor inválido."))
+
+        field_errors.append({
+            "field": field_name,
+            "message": _humanize_pydantic_error(err_type, msg),
+            "code": _PYDANTIC_CODE_MAP.get(err_type, "INVALID"),
+        })
+
+    body = {
+        "type": "https://santaritadiesel.com/errors/validation-error",
+        "title": "Erro de validação",
+        "status": 422,
+        "detail": "Um ou mais campos contêm valores inválidos.",
+        "error_code": "VALIDATION_ERROR",
+        "instance": str(request.url.path),
+        "errors": field_errors,
+    }
+    return JSONResponse(status_code=422, content=body)
 
 
 async def generic_error_handler(request: Request, exc: Exception) -> JSONResponse:
