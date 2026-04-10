@@ -1,5 +1,5 @@
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI
@@ -12,6 +12,8 @@ from src.core.middleware import (
     RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
 )
+from src.modules.auth.presentation.routes import router as auth_router
+from src.modules.users.presentation.routes import router as users_router
 
 settings = get_settings()
 logger = structlog.get_logger()
@@ -55,3 +57,7 @@ async def healthcheck() -> dict[str, str]:
         "version": settings.app_version,
         "environment": settings.app_env,
     }
+
+
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
