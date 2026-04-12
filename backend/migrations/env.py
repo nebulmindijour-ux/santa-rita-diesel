@@ -14,6 +14,7 @@ from src.modules.iam.domain.models import (  # noqa: F401
 from src.modules.customers.domain.models import Customer, Supplier  # noqa: F401
 from src.modules.fleet.domain.models import Vehicle  # noqa: F401
 from src.modules.drivers.domain.models import Driver  # noqa: F401
+from src.modules.operations.domain.models import Operation  # noqa: F401
 
 settings = get_settings()
 config = context.config

@@ -7,6 +7,7 @@ import { CustomersPage } from "@/modules/customers/page";
 import { SuppliersPage } from "@/modules/suppliers/page";
 import { FleetPage } from "@/modules/fleet/page";
 import { DriversPage } from "@/modules/drivers/page";
+import { OperationsPage } from "@/modules/operations/page";
 import { ModulePlaceholder } from "@/shared/components/module-placeholder";
 
 export function AppRoutes() {
@@ -26,15 +27,7 @@ export function AppRoutes() {
         <Route path="suppliers" element={<SuppliersPage />} />
         <Route path="fleet" element={<FleetPage />} />
         <Route path="drivers" element={<DriversPage />} />
-        <Route
-          path="operations"
-          element={
-            <ModulePlaceholder
-              title="Operações"
-              description="Entregas, rotas, status, previsões, ocorrências e link de rastreio externo."
-            />
-          }
-        />
+        <Route path="operations" element={<OperationsPage />} />
         <Route
           path="maintenance"
           element={
