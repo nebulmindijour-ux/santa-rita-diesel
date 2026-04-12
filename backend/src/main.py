@@ -20,6 +20,8 @@ from src.core.middleware import (
 )
 from src.modules.auth.presentation.routes import router as auth_router
 from src.modules.customers.presentation.routes import router as customers_router
+from src.modules.drivers.presentation.routes import router as drivers_router
+from src.modules.fleet.presentation.routes import router as fleet_router
 from src.modules.suppliers.presentation.routes import router as suppliers_router
 from src.modules.users.presentation.routes import router as users_router
 
@@ -72,3 +74,5 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(customers_router, prefix="/api/v1")
 app.include_router(suppliers_router, prefix="/api/v1")
+app.include_router(fleet_router, prefix="/api/v1")
+app.include_router(drivers_router, prefix="/api/v1")

@@ -5,6 +5,8 @@ import { LoginPage } from "@/modules/auth/login-page";
 import { ProtectedRoute } from "@/modules/auth/protected-route";
 import { CustomersPage } from "@/modules/customers/page";
 import { SuppliersPage } from "@/modules/suppliers/page";
+import { FleetPage } from "@/modules/fleet/page";
+import { DriversPage } from "@/modules/drivers/page";
 import { ModulePlaceholder } from "@/shared/components/module-placeholder";
 
 export function AppRoutes() {
@@ -22,24 +24,8 @@ export function AppRoutes() {
         <Route index element={<DashboardPlaceholder />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />
-        <Route
-          path="fleet"
-          element={
-            <ModulePlaceholder
-              title="Frota"
-              description="Gestão de caminhões, reboques, veículos de apoio, status operacional, odômetro, horímetro e disponibilidade."
-            />
-          }
-        />
-        <Route
-          path="drivers"
-          element={
-            <ModulePlaceholder
-              title="Motoristas"
-              description="Cadastro de motoristas, documentos, CNH, vencimentos, jornada e histórico operacional."
-            />
-          }
-        />
+        <Route path="fleet" element={<FleetPage />} />
+        <Route path="drivers" element={<DriversPage />} />
         <Route
           path="operations"
           element={
