@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ClipboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin } from "lucide-react";
 import { Input } from "@/design-system/components/input";
 import { Textarea } from "@/design-system/components/textarea";
 import { Select } from "@/design-system/components/select";
+import { RouteMap } from "@/design-system/components/route-map";
 import { STATE_OPTIONS } from "@/shared/lib/brazilian-states";
 import { customersService } from "@/modules/customers/service";
 import { fleetService } from "@/modules/fleet/service";
@@ -18,6 +19,22 @@ interface OperationFormProps {
   isSubmitting: boolean;
   onSubmit: (payload: CreateOperationPayload) => void;
   formId: string;
+}
+
+function tryParseCoordPair(value: string): { lat: string; lng: string } | null {
+  const cleaned = value.trim().replace(/\s+/g, " ");
+  const separators = [",", ";", " "];
+  for (const sep of separators) {
+    const parts = cleaned.split(sep).map((p) => p.trim()).filter(Boolean);
+    if (parts.length === 2) {
+      const lat = parseFloat(parts[0]!);
+      const lng = parseFloat(parts[1]!);
+      if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+        return { lat: String(lat), lng: String(lng) };
+      }
+    }
+  }
+  return null;
 }
 
 export function OperationForm({ initialData, isSubmitting, onSubmit, formId }: OperationFormProps) {
@@ -56,18 +73,16 @@ export function OperationForm({ initialData, isSubmitting, onSubmit, formId }: O
   const isEditing = !!initialData;
 
   const { data: customersData } = useQuery({
-    queryKey: ["customers-select"],
-    queryFn: () => customersService.list({ page_size: 200, is_active: true }),
+    queryKey: ["customers-all-select"],
+    queryFn: () => customersService.list({ page_size: 200 }),
   });
-
   const { data: vehiclesData } = useQuery({
-    queryKey: ["vehicles-select"],
-    queryFn: () => fleetService.list({ page_size: 200, is_active: true }),
+    queryKey: ["vehicles-all-select"],
+    queryFn: () => fleetService.list({ page_size: 200 }),
   });
-
   const { data: driversData } = useQuery({
-    queryKey: ["drivers-select"],
-    queryFn: () => driversService.list({ page_size: 200, is_active: true }),
+    queryKey: ["drivers-all-select"],
+    queryFn: () => driversService.list({ page_size: 200 }),
   });
 
   const customers = customersData?.items || [];
@@ -78,49 +93,50 @@ export function OperationForm({ initialData, isSubmitting, onSubmit, formId }: O
     value: c.id,
     label: `${c.legal_name}${c.city ? ` — ${c.city}/${c.state}` : ""}`,
   }));
-
   const vehicleOptions = vehicles.map((v) => ({
     value: v.id,
     label: `${v.plate} — ${v.brand} ${v.model} (${formatNumber(v.odometer)} km)`,
   }));
-
   const driverOptions = drivers.map((d) => ({
     value: d.id,
     label: `${d.full_name} — CNH ${d.cnh_category}`,
   }));
 
-  function handleCustomerChange(newCustomerId: string) {
-    setCustomerId(newCustomerId);
-    if (!newCustomerId || isEditing) return;
-
-    customersService.getById(newCustomerId).then((customer) => {
+  function handleCustomerChange(id: string) {
+    setCustomerId(id);
+    if (!id || isEditing) return;
+    customersService.getById(id).then((c) => {
       const parts: string[] = [];
-      if (customer.street) {
-        let addr = customer.street;
-        if (customer.number) addr += `, ${customer.number}`;
-        parts.push(addr);
-      }
-      if (customer.district) parts.push(customer.district);
-      if (customer.city) parts.push(customer.city);
-      if (customer.state) parts.push(customer.state);
-
-      if (parts.length > 0 && !destDescription) {
-        setDestDescription(parts.join(", "));
-      }
-      if (customer.city && !destCity) setDestCity(customer.city);
-      if (customer.state && !destState) setDestState(customer.state);
-      if (customer.latitude && !destLat) setDestLat(String(customer.latitude));
-      if (customer.longitude && !destLng) setDestLng(String(customer.longitude));
+      if (c.street) { let a = c.street; if (c.number) a += `, ${c.number}`; parts.push(a); }
+      if (c.district) parts.push(c.district);
+      if (c.city) parts.push(c.city);
+      if (c.state) parts.push(c.state);
+      if (parts.length > 0 && !destDescription) setDestDescription(parts.join(", "));
+      if (c.city && !destCity) setDestCity(c.city);
+      if (c.state && !destState) setDestState(c.state);
+      if (c.latitude && !destLat) setDestLat(String(c.latitude));
+      if (c.longitude && !destLng) setDestLng(String(c.longitude));
     }).catch(() => {});
   }
 
-  function handleVehicleChange(newVehicleId: string) {
-    setVehicleId(newVehicleId);
-    if (!newVehicleId || isEditing) return;
+  function handleVehicleChange(id: string) {
+    setVehicleId(id);
+    if (!id || isEditing) return;
+    const v = vehicles.find((x) => x.id === id);
+    if (v && !odometerStart) setOdometerStart(String(v.odometer));
+  }
 
-    const vehicle = vehicles.find((v) => v.id === newVehicleId);
-    if (vehicle && !odometerStart) {
-      setOdometerStart(String(vehicle.odometer));
+  function handleCoordPaste(
+    e: ClipboardEvent<HTMLInputElement>,
+    setLat: (v: string) => void,
+    setLng: (v: string) => void,
+  ) {
+    const pasted = e.clipboardData.getData("text");
+    const pair = tryParseCoordPair(pasted);
+    if (pair) {
+      e.preventDefault();
+      setLat(pair.lat);
+      setLng(pair.lng);
     }
   }
 
@@ -161,7 +177,7 @@ export function OperationForm({ initialData, isSubmitting, onSubmit, formId }: O
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
-    const payload: CreateOperationPayload & { status?: string; odometer_end?: number | null; origin_latitude?: number | null; origin_longitude?: number | null; destination_latitude?: number | null; destination_longitude?: number | null } = {
+    const payload: Record<string, unknown> = {
       customer_id: customerId,
       vehicle_id: vehicleId || undefined,
       driver_id: driverId || undefined,
@@ -185,31 +201,29 @@ export function OperationForm({ initialData, isSubmitting, onSubmit, formId }: O
       scheduled_end: scheduledEnd ? new Date(scheduledEnd).toISOString() : undefined,
       notes: notes || undefined,
     };
-
     if (isEditing) {
-      (payload as Record<string, unknown>).status = status;
-      if (odometerEnd) {
-        (payload as Record<string, unknown>).odometer_end = parseFloat(odometerEnd);
-      }
+      payload.status = status;
+      if (odometerEnd) payload.odometer_end = parseFloat(odometerEnd);
     }
-
-    onSubmit(payload);
+    onSubmit(payload as CreateOperationPayload);
   }
 
   const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
+  const oLat = originLat ? parseFloat(originLat) : null;
+  const oLng = originLng ? parseFloat(originLng) : null;
+  const dLat = destLat ? parseFloat(destLat) : null;
+  const dLng = destLng ? parseFloat(destLng) : null;
 
   return (
     <form id={formId} onSubmit={handleSubmit} className="space-y-6">
       <section className="space-y-4">
         <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-content-tertiary">Atribuição</h3>
-        <Select label="Cliente" value={customerId} onChange={(e) => handleCustomerChange(e.target.value)} options={customerOptions} placeholder="Selecione o cliente" error={errors.customerId} required disabled={isEditing || isSubmitting} hint="Ao selecionar, o endereço do cliente preenche o destino automaticamente" />
+        <Select label="Cliente" value={customerId} onChange={(e) => handleCustomerChange(e.target.value)} options={customerOptions} placeholder="Selecione o cliente" error={errors.customerId} required disabled={isEditing || isSubmitting} hint="Ao selecionar, o endereço do cliente preenche o destino" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Select label="Veículo" value={vehicleId} onChange={(e) => handleVehicleChange(e.target.value)} options={vehicleOptions} placeholder="Selecione o veículo" disabled={isSubmitting} hint={selectedVehicle ? `Odômetro atual: ${formatNumber(selectedVehicle.odometer)} km` : undefined} />
           <Select label="Motorista" value={driverId} onChange={(e) => setDriverId(e.target.value)} options={driverOptions} placeholder="Selecione o motorista" disabled={isSubmitting} />
         </div>
-        {isEditing && (
-          <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value)} options={OPERATION_STATUS_OPTIONS} />
-        )}
+        {isEditing && <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value)} options={OPERATION_STATUS_OPTIONS} />}
       </section>
 
       <section className="space-y-4">
@@ -220,8 +234,29 @@ export function OperationForm({ initialData, isSubmitting, onSubmit, formId }: O
           <Select label="UF" value={originState} onChange={(e) => setOriginState(e.target.value)} options={STATE_OPTIONS} placeholder="Selecione" disabled={isSubmitting} />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Latitude" type="number" step="any" value={originLat} onChange={(e) => setOriginLat(e.target.value)} placeholder="-21.000000" disabled={isSubmitting} leftIcon={<MapPin className="h-3.5 w-3.5" />} />
-          <Input label="Longitude" type="number" step="any" value={originLng} onChange={(e) => setOriginLng(e.target.value)} placeholder="-45.000000" disabled={isSubmitting} leftIcon={<MapPin className="h-3.5 w-3.5" />} />
+          <Input
+            label="Latitude"
+            type="number"
+            step="any"
+            value={originLat}
+            onChange={(e) => setOriginLat(e.target.value)}
+            onPaste={(e) => handleCoordPaste(e as unknown as ClipboardEvent<HTMLInputElement>, setOriginLat, setOriginLng)}
+            placeholder="-21.917195"
+            disabled={isSubmitting}
+            leftIcon={<MapPin className="h-3.5 w-3.5" />}
+            hint="Cole lat,lng para separar automaticamente"
+          />
+          <Input
+            label="Longitude"
+            type="number"
+            step="any"
+            value={originLng}
+            onChange={(e) => setOriginLng(e.target.value)}
+            onPaste={(e) => handleCoordPaste(e as unknown as ClipboardEvent<HTMLInputElement>, setOriginLat, setOriginLng)}
+            placeholder="-45.550869"
+            disabled={isSubmitting}
+            leftIcon={<MapPin className="h-3.5 w-3.5" />}
+          />
         </div>
       </section>
 
@@ -233,35 +268,63 @@ export function OperationForm({ initialData, isSubmitting, onSubmit, formId }: O
           <Select label="UF" value={destState} onChange={(e) => setDestState(e.target.value)} options={STATE_OPTIONS} placeholder="Selecione" disabled={isSubmitting} />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Latitude" type="number" step="any" value={destLat} onChange={(e) => setDestLat(e.target.value)} placeholder="-23.550000" disabled={isSubmitting} leftIcon={<MapPin className="h-3.5 w-3.5" />} />
-          <Input label="Longitude" type="number" step="any" value={destLng} onChange={(e) => setDestLng(e.target.value)} placeholder="-46.633000" disabled={isSubmitting} leftIcon={<MapPin className="h-3.5 w-3.5" />} />
+          <Input
+            label="Latitude"
+            type="number"
+            step="any"
+            value={destLat}
+            onChange={(e) => setDestLat(e.target.value)}
+            onPaste={(e) => handleCoordPaste(e as unknown as ClipboardEvent<HTMLInputElement>, setDestLat, setDestLng)}
+            placeholder="-23.550520"
+            disabled={isSubmitting}
+            leftIcon={<MapPin className="h-3.5 w-3.5" />}
+            hint="Cole lat,lng para separar automaticamente"
+          />
+          <Input
+            label="Longitude"
+            type="number"
+            step="any"
+            value={destLng}
+            onChange={(e) => setDestLng(e.target.value)}
+            onPaste={(e) => handleCoordPaste(e as unknown as ClipboardEvent<HTMLInputElement>, setDestLat, setDestLng)}
+            placeholder="-46.633308"
+            disabled={isSubmitting}
+            leftIcon={<MapPin className="h-3.5 w-3.5" />}
+          />
         </div>
-        <p className="flex items-center gap-1.5 text-xs text-content-tertiary">
-          <MapPin className="h-3 w-3" />
-          Na próxima versão, o mapa calculará rota, distância e tempo automaticamente
-        </p>
+      </section>
+
+      <section className="space-y-4">
+        <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-content-tertiary">Mapa da rota</h3>
+        <RouteMap
+          originLat={oLat}
+          originLng={oLng}
+          originLabel={originDescription || "Origem"}
+          destinationLat={dLat}
+          destinationLng={dLng}
+          destinationLabel={destDescription || "Destino"}
+          className="h-[350px] w-full"
+        />
       </section>
 
       <section className="space-y-4">
         <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-content-tertiary">Rota e carga</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Distância estimada (km)" type="number" min="0" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)} disabled={isSubmitting} />
+          <Input label="Distância estimada (km)" type="number" min="0" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)} disabled={isSubmitting} hint="O mapa calcula automaticamente" />
           <Input label="Tempo estimado (horas)" type="number" min="0" step="0.5" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} disabled={isSubmitting} />
         </div>
-        <Input label="Descrição da carga" value={cargoDescription} onChange={(e) => setCargoDescription(e.target.value)} placeholder="Tipo de mercadoria transportada" disabled={isSubmitting} />
+        <Input label="Descrição da carga" value={cargoDescription} onChange={(e) => setCargoDescription(e.target.value)} placeholder="Tipo de mercadoria" disabled={isSubmitting} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Peso da carga (kg)" type="number" min="0" value={cargoWeight} onChange={(e) => setCargoWeight(e.target.value)} disabled={isSubmitting} />
-          <Input label="Volume da carga (m³)" type="number" min="0" step="0.1" value={cargoVolume} onChange={(e) => setCargoVolume(e.target.value)} disabled={isSubmitting} />
+          <Input label="Peso (kg)" type="number" min="0" value={cargoWeight} onChange={(e) => setCargoWeight(e.target.value)} disabled={isSubmitting} />
+          <Input label="Volume (m³)" type="number" min="0" step="0.1" value={cargoVolume} onChange={(e) => setCargoVolume(e.target.value)} disabled={isSubmitting} />
         </div>
       </section>
 
       <section className="space-y-4">
         <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-content-tertiary">Odômetro</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Km na saída" type="number" min="0" value={odometerStart} onChange={(e) => setOdometerStart(e.target.value)} placeholder="Preenchido automaticamente pelo veículo" disabled={isSubmitting} hint={!isEditing && selectedVehicle ? `Odômetro atual do veículo: ${formatNumber(selectedVehicle.odometer)} km` : undefined} />
-          {isEditing && (
-            <Input label="Km na chegada" type="number" min="0" value={odometerEnd} onChange={(e) => setOdometerEnd(e.target.value)} placeholder="Informe ao concluir a operação" disabled={isSubmitting} hint="Ao concluir, o odômetro do veículo será atualizado automaticamente" />
-          )}
+          <Input label="Km na saída" type="number" min="0" value={odometerStart} onChange={(e) => setOdometerStart(e.target.value)} placeholder="Preenchido pelo veículo" disabled={isSubmitting} hint={!isEditing && selectedVehicle ? `Odômetro atual: ${formatNumber(selectedVehicle.odometer)} km` : undefined} />
+          {isEditing && <Input label="Km na chegada" type="number" min="0" value={odometerEnd} onChange={(e) => setOdometerEnd(e.target.value)} placeholder="Ao concluir" disabled={isSubmitting} hint="Atualiza o odômetro do veículo" />}
         </div>
       </section>
 

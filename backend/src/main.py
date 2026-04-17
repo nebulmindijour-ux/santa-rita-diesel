@@ -7,21 +7,17 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import get_settings
-from src.core.errors import (
-    AppError,
-    app_error_handler,
-    generic_error_handler,
-    validation_error_handler,
-)
-from src.core.middleware import (
-    RequestIdMiddleware,
-    RequestLoggingMiddleware,
-    SecurityHeadersMiddleware,
-)
+from src.core.errors import AppError, app_error_handler, generic_error_handler, validation_error_handler
+from src.core.middleware import RequestIdMiddleware, RequestLoggingMiddleware, SecurityHeadersMiddleware
 from src.modules.auth.presentation.routes import router as auth_router
 from src.modules.customers.presentation.routes import router as customers_router
+from src.modules.dashboard.presentation.routes import router as dashboard_router
+from src.modules.documents.presentation.routes import router as documents_router
 from src.modules.drivers.presentation.routes import router as drivers_router
+from src.modules.finance.presentation.routes import router as finance_router
 from src.modules.fleet.presentation.routes import router as fleet_router
+from src.modules.maintenance.presentation.routes import router as maintenance_router
+from src.modules.notifications.presentation.routes import router as notifications_router
 from src.modules.operations.presentation.routes import router as operations_router
 from src.modules.suppliers.presentation.routes import router as suppliers_router
 from src.modules.users.presentation.routes import router as users_router
@@ -38,21 +34,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
+    title=settings.app_name, version=settings.app_version,
     docs_url="/docs" if settings.is_development else None,
     redoc_url="/redoc" if settings.is_development else None,
     openapi_url="/openapi.json" if settings.is_development else None,
     lifespan=lifespan,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins_list, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"], allow_headers=["*"])
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(RequestIdMiddleware)
@@ -64,17 +53,18 @@ app.add_exception_handler(Exception, generic_error_handler)  # type: ignore[arg-
 
 @app.get("/api/v1/health", tags=["health"])
 async def healthcheck() -> dict[str, str]:
-    return {
-        "status": "healthy",
-        "version": settings.app_version,
-        "environment": settings.app_env,
-    }
+    return {"status": "healthy", "version": settings.app_version, "environment": settings.app_env}
 
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
+app.include_router(dashboard_router, prefix="/api/v1")
+app.include_router(notifications_router, prefix="/api/v1")
 app.include_router(customers_router, prefix="/api/v1")
 app.include_router(suppliers_router, prefix="/api/v1")
 app.include_router(fleet_router, prefix="/api/v1")
 app.include_router(drivers_router, prefix="/api/v1")
 app.include_router(operations_router, prefix="/api/v1")
+app.include_router(maintenance_router, prefix="/api/v1")
+app.include_router(finance_router, prefix="/api/v1")
+app.include_router(documents_router, prefix="/api/v1")

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Truck, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Truck, Pencil, Trash2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/design-system/components/page-header";
 import { Button } from "@/design-system/components/button";
@@ -13,6 +13,7 @@ import { DataTable } from "@/design-system/components/data-table";
 import type { DataTableColumn } from "@/design-system/components/data-table";
 import { formatDate, formatPlate, formatNumber } from "@/shared/lib/formatters";
 import { extractProblem } from "@/shared/lib/api-client";
+import { useIsAdmin } from "@/modules/auth/use-permissions";
 import { fleetService } from "./service";
 import type { Vehicle, VehicleListItem, CreateVehiclePayload } from "./types";
 import { VEHICLE_TYPE_LABELS, VEHICLE_STATUS_LABELS, VEHICLE_STATUS_TONES, VEHICLE_TYPE_OPTIONS, VEHICLE_STATUS_OPTIONS } from "./types";
@@ -20,19 +21,19 @@ import { VehicleForm } from "./components/vehicle-form";
 
 const FORM_ID = "vehicle-form";
 
-function isExpiringSoon(dateStr: string | null): boolean {
-  if (!dateStr) return false;
-  const diff = new Date(dateStr).getTime() - Date.now();
+function isExpiringSoon(d: string | null): boolean {
+  if (!d) return false;
+  const diff = new Date(d).getTime() - Date.now();
   return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
 }
-
-function isExpired(dateStr: string | null): boolean {
-  if (!dateStr) return false;
-  return new Date(dateStr).getTime() < Date.now();
+function isExpired(d: string | null): boolean {
+  if (!d) return false;
+  return new Date(d).getTime() < Date.now();
 }
 
 export function FleetPage() {
   const queryClient = useQueryClient();
+  const isAdmin = useIsAdmin();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -62,7 +63,11 @@ export function FleetPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => fleetService.remove(id),
     onSuccess: () => { toast.success("Veículo excluído permanentemente"); queryClient.invalidateQueries({ queryKey: ["vehicles"] }); setConfirmDelete(null); },
-    onError: async (err) => { const p = await extractProblem(err); toast.error(p?.detail || "Erro ao excluir"); },
+    onError: async (err) => {
+      const p = await extractProblem(err);
+      if (p?.status === 403) { toast.error("Apenas administradores podem excluir veículos"); }
+      else { toast.error(p?.detail || "Erro ao excluir"); }
+    },
   });
 
   async function handleEdit(row: VehicleListItem) {
@@ -83,14 +88,8 @@ export function FleetPage() {
         </div>
       ),
     },
-    {
-      key: "type", header: "Tipo", width: "150px",
-      cell: (row) => <Badge tone="brand">{VEHICLE_TYPE_LABELS[row.vehicle_type] || row.vehicle_type}</Badge>,
-    },
-    {
-      key: "odometer", header: "Odômetro", width: "130px", align: "right",
-      cell: (row) => <span className="font-mono text-xs text-content-secondary">{formatNumber(row.odometer)} km</span>,
-    },
+    { key: "type", header: "Tipo", width: "150px", cell: (row) => <Badge tone="brand">{VEHICLE_TYPE_LABELS[row.vehicle_type] || row.vehicle_type}</Badge> },
+    { key: "odometer", header: "Odômetro", width: "130px", align: "right", cell: (row) => <span className="font-mono text-xs text-content-secondary">{formatNumber(row.odometer)} km</span> },
     {
       key: "docs", header: "Documentos", width: "180px",
       cell: (row) => {
@@ -112,20 +111,19 @@ export function FleetPage() {
         );
       },
     },
+    { key: "status", header: "Status", width: "130px", cell: (row) => <Badge tone={VEHICLE_STATUS_TONES[row.status] || "neutral"} dot>{VEHICLE_STATUS_LABELS[row.status] || row.status}</Badge> },
     {
-      key: "status", header: "Status", width: "130px",
-      cell: (row) => <Badge tone={VEHICLE_STATUS_TONES[row.status] || "neutral"} dot>{VEHICLE_STATUS_LABELS[row.status] || row.status}</Badge>,
-    },
-    {
-      key: "actions", header: "", width: "100px", align: "right",
+      key: "actions", header: "", width: isAdmin ? "100px" : "60px", align: "right",
       cell: (row) => (
         <div className="flex items-center justify-end gap-1">
           <button onClick={(e) => { e.stopPropagation(); handleEdit(row); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary transition-colors hover:bg-surface-secondary hover:text-content-primary" aria-label="Editar">
             <Pencil className="h-3.5 w-3.5" />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(row); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary transition-colors hover:bg-red-50 hover:text-status-error" aria-label="Excluir">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          {isAdmin && (
+            <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(row); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary transition-colors hover:bg-red-50 hover:text-status-error" aria-label="Excluir (admin)" title="Excluir permanentemente — apenas administradores">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       ),
     },
@@ -159,7 +157,15 @@ export function FleetPage() {
         onClose={() => setConfirmDelete(null)}
         onConfirm={() => confirmDelete && deleteMutation.mutate(confirmDelete.id)}
         title="Excluir veículo permanentemente?"
-        description={`O veículo "${formatPlate(confirmDelete?.plate || "")}" será removido permanentemente do sistema. Esta ação não pode ser desfeita.`}
+        description={
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-status-error">
+              <ShieldAlert className="h-4 w-4 flex-none" />
+              <span>Ação restrita a administradores. Esta operação ficará registrada no log de auditoria e não pode ser desfeita.</span>
+            </div>
+            <p>O veículo <strong>{formatPlate(confirmDelete?.plate || "")}</strong> será removido permanentemente do sistema.</p>
+          </div>
+        }
         confirmLabel="Excluir permanentemente"
         tone="danger"
         isLoading={deleteMutation.isPending}
