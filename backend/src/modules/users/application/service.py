@@ -83,18 +83,18 @@ class UserService:
         users = result.scalars().all()
 
         items = [
-            UserListItem(
-                id=u.id,
-                email=u.email,
-                full_name=u.full_name,
-                role_name=u.role.name,
-                is_active=u.is_active,
-                is_locked=u.is_locked,
-                last_login_at=u.last_login_at,
-                created_at=u.created_at,
-            )
-            for u in users
-        ]
+    UserListItem(
+        id=u.id,
+        email=u.email,
+        full_name=u.full_name,
+        roles=[u.role.name],  # era role_name=u.role.name
+        is_active=u.is_active,
+        is_locked=u.is_locked,
+        last_login_at=u.last_login_at,
+        created_at=u.created_at,
+    )
+    for u in users
+]
 
         return PaginatedResponse.create(items=items, total=total, params=params)
 

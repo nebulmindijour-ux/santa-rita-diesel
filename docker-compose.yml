@@ -6,9 +6,9 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-santa_rita_diesel}
+      POSTGRES_DB: ${POSTGRES_DB:-santa-rita-diesel}
       POSTGRES_USER: ${POSTGRES_USER:-srd_app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-srd_dev_password_2026}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-112358C}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

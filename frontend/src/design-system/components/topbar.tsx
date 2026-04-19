@@ -42,13 +42,13 @@ export function Topbar() {
   }
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b border-border-default bg-surface-primary px-6">
-      <div className="relative max-w-md flex-1">
+    <header className="flex h-14 items-center justify-between border-b border-border-default bg-surface-primary px-6">
+      <div className="relative w-72">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary" />
         <input
           type="search"
           placeholder="Buscar..."
-          className="h-9 w-full rounded-lg border border-border-default bg-surface-primary pl-9 pr-3 text-sm outline-none transition-colors focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
+          className="h-9 w-full rounded-lg border border-border-default bg-surface-secondary pl-9 pr-3 text-sm outline-none transition-colors focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
         />
       </div>
 

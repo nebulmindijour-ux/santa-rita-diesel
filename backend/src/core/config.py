@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     app_env: str = "development"
 
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/santa_rita"
+    database_url: str = "postgresql+asyncpg://srd_app:srd_dev_password_2026@localhost:5432/santa_rita_diesel"
     redis_url: str = "redis://localhost:6379/0"
 
     jwt_secret_key: str = "dev-secret-change-in-production-minimum-32-chars"

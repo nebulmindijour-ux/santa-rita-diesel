@@ -38,11 +38,12 @@ class UserListItem(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str
-    role_name: str
+    roles: list[str]
     is_active: bool
     is_locked: bool
     last_login_at: datetime | None
     created_at: datetime
 
+
     class Config:
-        from_attributes = True
+        from_attributes = False

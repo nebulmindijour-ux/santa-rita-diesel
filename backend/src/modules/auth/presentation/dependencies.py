@@ -10,7 +10,7 @@ from src.core.database import get_db
 from src.core.errors import ForbiddenError, UnauthorizedError
 from src.core.security import decode_access_token
 from src.modules.auth.application.dtos import UserProfile
-from src.modules.iam.domain.models import Permission, RolePermission, User
+from src.modules.iam.domain.models import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -56,9 +56,11 @@ async def get_current_user(
     )
 
 
+# ✅ Dependency base (perfeito como está)
 CurrentUser = Annotated[UserProfile, Depends(get_current_user)]
 
 
+# ✅ CORRIGIDO: NÃO retorna Depends
 def require_permission(permission_code: str):
     def checker(current_user: CurrentUser) -> UserProfile:
         if permission_code not in current_user.permissions:
@@ -66,9 +68,11 @@ def require_permission(permission_code: str):
                 detail=f"Permissão '{permission_code}' necessária para esta ação."
             )
         return current_user
-    return Depends(checker)
+
+    return checker
 
 
+# ✅ CORRIGIDO: NÃO retorna Depends
 def require_role(*role_names: str):
     def checker(current_user: CurrentUser) -> UserProfile:
         if current_user.role_name not in role_names:
@@ -76,4 +80,5 @@ def require_role(*role_names: str):
                 detail="Seu perfil não tem acesso a esta funcionalidade."
             )
         return current_user
-    return Depends(checker)
+
+    return checker

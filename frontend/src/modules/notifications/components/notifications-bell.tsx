@@ -4,8 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Bell, AlertTriangle, Clock, Info, CheckCircle2, FileText, Wrench } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { formatDate } from "@/shared/lib/formatters";
-import { notificationsService } from "./service";
-import type { NotificationCategory, NotificationItem, NotificationSeverity } from "./service";
+import { notificationsService } from "../service";
+import type { NotificationCategory, NotificationItem, NotificationSeverity } from "../service";
 
 function SeverityIcon({ severity }: { severity: NotificationSeverity }) {
   if (severity === "critical")
